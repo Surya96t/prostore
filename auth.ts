@@ -3,10 +3,11 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/db/prisma';
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { compareSync } from 'bcrypt-ts-edge';
-import { NextAuthConfig } from 'next-auth';
+import { authConfig } from './auth.config';
+import type { NextAuthConfig } from 'next-auth';
 
 
-export const config = {
+export const config: NextAuthConfig = {
     pages: {
         signIn: '/sign-in',
         error: '/sign-in',
@@ -56,20 +57,21 @@ export const config = {
         }),
     ],
     callbacks: {
-        async session({ session, user, trigger, token }) {
+        ...authConfig.callbacks,
+        async session({ session, token, trigger }) {
             // Set the user ID from the token
             session.user.id = token.sub as string;
-            session.user.role = token.role;
-            session.user.name = token.name;
+            session.user.role = token.role as string;
+            session.user.name = token.name as string;
 
             console.log(token)
             // If there is an update, set the user name
             if (trigger === 'update') {
-                session.user.name = user.name;
+                session.user.name = token.name as string;
             }
             return session;
         },
-        async jwt({ token, user, trigger , session }) {
+        async jwt({ token, user }) {
             // Assign user fields to token 
             if (user) {
                 token.role = user.role;
@@ -86,9 +88,8 @@ export const config = {
                 }
             }
             return token;
-        }
+        },
     },
-}  satisfies NextAuthConfig;
-
+} 
 
 export const {handlers, auth, signIn, signOut} = NextAuth(config);
